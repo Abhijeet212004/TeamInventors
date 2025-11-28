@@ -8,7 +8,7 @@ In critical situations—whether a medical emergency, a natural disaster, or a p
 
 AlertMate is an **Agentic AI & Offline-First Safety Ecosystem**. It doesn't just wait for you to call for help; it uses **Machine Learning** to detect anomalies, **Vector Search** to understand medical history, and **LoRa Mesh** to communicate when the world goes dark.
 
-### 🧠 Agentic AI & Machine Learning Core
+### Agentic AI & Machine Learning Core
 
 AlertMate's intelligence is powered by a multi-model approach designed to act as a proactive guardian:
 
@@ -28,7 +28,7 @@ AlertMate's intelligence is powered by a multi-model approach designed to act as
 
 -----
 
-### 🌐 Resilient Infrastructure
+### Resilient Infrastructure
 
 *   **Offline LoRa Mesh:**
     *   When the internet fails, AlertMate switches to a custom **ESP32-based LoRa Mesh Network**.
