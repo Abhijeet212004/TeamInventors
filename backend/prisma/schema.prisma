@@ -1,0 +1,282 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  GUARDIAN
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  INACTIVE
+}
+
+enum BubbleType {
+  PERMANENT
+  TEMPORARY
+}
+
+enum TripStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id              String   @id @default(uuid())
+  name            String?  // User's display name
+  email           String?  @unique
+  phone           String   @unique
+  role            Role     @default(USER)
+  qrCode          String   @unique // QR code identifier
+  pushToken       String?  // Expo push notification token
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations for user being monitored
+  guardiansConnections GuardianConnection[] @relation("UserBeingMonitored")
+  
+  // Relations for user being a guardian
+  monitoringConnections GuardianConnection[] @relation("GuardianUser")
+  
+  // Bubbles created by this user
+  bubblesCreated Bubble[] @relation("BubbleCreator")
+  
+  // Bubble memberships
+  bubbleMemberships BubbleMember[]
+  
+  // Trips created by this user
+  trips Trip[]
+  
+  // Trips shared with this user (as guardian)
+  sharedTrips TripShare[] @relation("SharedTrips")
+
+  // Medical Profile
+  medicalProfile MedicalProfile?
+
+  @@map("users")
+}
+
+model GuardianConnection {
+  id        String           @id @default(uuid())
+  userId    String           // The person being monitored
+  guardianId String          // The guardian
+  status    ConnectionStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user      User @relation("UserBeingMonitored", fields: [userId], references: [id], onDelete: Cascade)
+  guardian  User @relation("GuardianUser", fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, guardianId])
+  @@map("guardian_connections")
+}
+
+// Placeholder models for future implementation
+model HealthStats {
+  id        String   @id @default(uuid())
+  userId    String
+  // Add health-related fields later
+  createdAt DateTime @default(now())
+
+  @@map("health_stats")
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  userId    String
+  latitude  Float
+  longitude Float
+  timestamp DateTime @default(now())
+
+  @@map("locations")
+}
+
+model Bubble {
+  id         String     @id @default(uuid())
+  name       String
+  icon       String     // Icon identifier (girl, home, friends, travel, etc.)
+  color      String     // Hex color code
+  type       BubbleType @default(PERMANENT)
+  inviteCode String     @unique // Unique code for inviting members
+  creatorId  String
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  creator User           @relation("BubbleCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  members BubbleMember[]
+
+  @@map("bubbles")
+}
+
+model BubbleMember {
+  id        String   @id @default(uuid())
+  bubbleId  String
+  userId    String
+  joinedAt  DateTime @default(now())
+
+  bubble Bubble @relation(fields: [bubbleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bubbleId, userId])
+  @@map("bubble_members")
+}
+
+model UserTracking {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  batteryLevel  Int?     // Battery percentage (0-100)
+  signalStrength String? // Signal strength status (e.g., "Good", "Poor", "Coming Soon")
+  phoneStatus   String?  // Phone status (e.g., "Active", "Coming Soon")
+  speed         Float?   // Speed in km/hr
+  latitude      Float?   // Current latitude
+  longitude     Float?   // Current longitude
+  address       String?  // Current location address
+  lastActiveAt  DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("user_tracking")
+}
+
+model Trip {
+  id          String     @id @default(uuid())
+  userId      String
+  name        String?    // Optional trip name
+  startLat    Float
+  startLng    Float
+  startAddress String?
+  endLat      Float
+  endLng      Float
+  endAddress  String?
+  status      TripStatus @default(ACTIVE)
+  startedAt   DateTime   @default(now())
+  endedAt     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stops       TripStop[]
+  shares      TripShare[]
+  analytics   TripAnalytics?
+  locations   TripLocation[]
+
+  @@map("trips")
+}
+
+model TripStop {
+  id          String    @id @default(uuid())
+  tripId      String
+  sequence    Int       // Order of the stop (1, 2, 3...)
+  latitude    Float
+  longitude   Float
+  address     String?
+  arrivedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("trip_stops")
+}
+
+model TripShare {
+  id         String   @id @default(uuid())
+  tripId     String
+  guardianId String
+  canView    Boolean  @default(true)
+  notified   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  trip     Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  guardian User @relation("SharedTrips", fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@map("trip_shares")
+}
+
+model TripAnalytics {
+  id             String   @id @default(uuid())
+  tripId         String   @unique
+  totalDistance  Float    // in meters
+  totalDuration  Int      // in seconds
+  avgSpeed       Float    // km/h
+  maxSpeed       Float    // km/h
+  stopsCompleted Int
+  completedAt    DateTime
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("trip_analytics")
+}
+
+model TripLocation {
+  id         String   @id @default(uuid())
+  tripId     String
+  latitude   Float
+  longitude  Float
+  speed      Float?   // km/h
+  recordedAt DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@map("trip_locations")
+}
+
+// --- Medical RAG Models ---
+
+model Doctor {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  specialty String?
+  hospital  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("doctors")
+}
+
+model MedicalProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  bloodType   String?
+  allergies   String?
+  conditions  String?
+  medications String?
+  height      String?
+  weight      String?
+  gender      String?  // Added gender field
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reports MedicalReport[]
+
+  @@map("medical_profiles")
+}
+
+model MedicalReport {
+  id        String   @id @default(uuid())
+  profileId String
+  content   String
+  fileUrl   String?
+  embedding String?  // Stored as stringified JSON or handle via vector DB sync
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  profile MedicalProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("medical_reports")
+}
