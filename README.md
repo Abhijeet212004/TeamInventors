@@ -40,14 +40,7 @@ AlertMate's intelligence is powered by a multi-model approach designed to act as
 
 -----
 
-### Our Vision in Action
 
-See our Agentic Safety System in action. Watch our demo video for a complete walkthrough of the RAG Chatbot, Offline Mesh, and ML Triggers.
-
-<p align="center">
-  <!-- Video placeholder as requested -->
-  <img src="https://placehold.co/600x400?text=Demo+Video+Coming+Soon" alt="Demo Video Placeholder" width="100%">
-</p>
 
 > **[View Our Technical Presentation (PDF)](AlertMate.pdf)**
 >
